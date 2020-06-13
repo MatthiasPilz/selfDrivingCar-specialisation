@@ -4,6 +4,7 @@
 # University of Toronto Institute for Aerospace Studies
 import pickle
 import numpy as np
+from numpy.linalg import inv
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from rotations import angle_normalize, rpy_jacobian_axis_angle, skew_symmetric, Quaternion
@@ -53,15 +54,15 @@ lidar = data['lidar']
 # Let's plot the ground truth trajectory to see what it looks like. When you're testing your
 # code later, feel free to comment this out.
 ################################################################################################
-gt_fig = plt.figure()
-ax = gt_fig.add_subplot(111, projection='3d')
-ax.plot(gt.p[:,0], gt.p[:,1], gt.p[:,2])
-ax.set_xlabel('x [m]')
-ax.set_ylabel('y [m]')
-ax.set_zlabel('z [m]')
-ax.set_title('Ground Truth trajectory')
-ax.set_zlim(-1, 5)
-plt.show()
+# gt_fig = plt.figure()
+# ax = gt_fig.add_subplot(111, projection='3d')
+# ax.plot(gt.p[:, 0], gt.p[:, 1], gt.p[:, 2])
+# ax.set_xlabel('x [m]')
+# ax.set_ylabel('y [m]')
+# ax.set_zlabel('z [m]')
+# ax.set_title('Ground Truth trajectory')
+# ax.set_zlim(-1, 5)
+# plt.show()
 
 
 ################################################################################################
@@ -104,14 +105,17 @@ var_imu_w = 0.25
 var_gnss  = 0.01
 var_lidar = 1.00
 
+R_gnss = var_gnss * np.eye(3)
+R_lidar = var_lidar * np.eye(3)
+
 ################################################################################################
 # We can also set up some constants that won't change for any iteration of our solver.
 ################################################################################################
 g = np.array([0, 0, -9.81])  # gravity
 l_jac = np.zeros([9, 6])
-l_jac[3:, :] = np.eye(6)  # motion model noise jacobian
+l_jac[3:, :] = np.eye(6)  # motion model noise Jacobian
 h_jac = np.zeros([3, 9])
-h_jac[:, :3] = np.eye(3)  # measurement model jacobian
+h_jac[:, :3] = np.eye(3)  # measurement model Jacobian
 
 
 #### 3. Initial Values #########################################################################
@@ -121,7 +125,7 @@ h_jac[:, :3] = np.eye(3)  # measurement model jacobian
 p_est = np.zeros([imu_f.data.shape[0], 3])  # position estimates
 v_est = np.zeros([imu_f.data.shape[0], 3])  # velocity estimates
 q_est = np.zeros([imu_f.data.shape[0], 4])  # orientation estimates as quaternions
-p_cov = np.zeros([imu_f.data.shape[0], 9, 9])  # covariance matrices at each timestep
+p_cov = np.zeros([imu_f.data.shape[0], 9, 9])  # covariance matrices at each time step
 
 # Set initial values.
 p_est[0] = gt.p[0]
@@ -138,13 +142,28 @@ lidar_i = 0
 # a function for it.
 ################################################################################################
 def measurement_update(sensor_var, p_cov_check, y_k, p_check, v_check, q_check):
+    # 3.0 shaping
+    y_k = y_k.reshape([3, 1])
+    p_check = p_check.reshape([3, 1])
+    v_check = v_check.reshape([3, 1])
+
     # 3.1 Compute Kalman Gain
+    K_k = p_cov_check @ h_jac.T @ inv(h_jac @ p_cov_check @ h_jac.T + sensor_var)
 
     # 3.2 Compute error state
+    dx_k = K_k @ (y_k - p_check)
 
     # 3.3 Correct predicted state
+    p_hat = p_check + dx_k[:3]
+    v_hat = v_check + dx_k[3:6]
+    q_hat = Quaternion(euler=dx_k[6:]).quat_mult_left(q_check)
 
     # 3.4 Compute corrected covariance
+    p_cov_hat = (np.eye(9) - K_k @ h_jac) @ p_cov_check
+
+    # print(p_hat.shape)
+    # print(v_hat.shape)
+    # print(q_hat.shape)
 
     return p_hat, v_hat, q_hat, p_cov_hat
 
@@ -156,16 +175,70 @@ def measurement_update(sensor_var, p_cov_check, y_k, p_check, v_check, q_check):
 ################################################################################################
 for k in range(1, imu_f.data.shape[0]):  # start at 1 b/c we have initial prediction from gt
     delta_t = imu_f.t[k] - imu_f.t[k - 1]
+    cur_time = imu_f.t[k]
+
+    C_ns = Quaternion(*q_est[k-1]).to_mat()
 
     # 1. Update state with IMU inputs
+    p_check = p_est[k-1] + delta_t * v_est[k-1] + 0.5 * delta_t**2 * (C_ns @ imu_f.data[k-1] + g)
+    v_check = v_est[k-1] + delta_t * (C_ns @ imu_f.data[k-1] + g)
+    q_check = Quaternion(axis_angle=delta_t*imu_w.data[k-1]).quat_mult_right(q_est[k-1])
 
     # 1.1 Linearize the motion model and compute Jacobians
+    f_jac = np.zeros([9, 9])
+    f_jac[0:, 0:] = np.eye(9)
+    f_jac[:3, 3:6] = delta_t * np.eye(3)
+    f_jac[3:6, 6:9] = -1.0 * delta_t * skew_symmetric(C_ns @ imu_f.data[k-1])
+    # f_jac[3:6, 6:9] = delta_t * skew_symmetric(-1.0 * C_ns @ imu_f.data[k-1])
+    f_jac[:3, 6:9] = -0.5 * delta_t**2 * skew_symmetric(C_ns @ imu_f.data[k-1])
+
+    var_Q = np.zeros([6, 6])
+    var_Q[0:3, 0:3] = delta_t**2 * var_imu_f * np.eye(3)
+    var_Q[3:6, 3:6] = delta_t**2 * var_imu_w * np.eye(3)
 
     # 2. Propagate uncertainty
+    # print(f_jac.shape)
+    # print(p_cov[k-1].shape)
+    # print(f_jac.T.shape)
+    # print(l_jac.shape)
+    # print(var_Q.shape)
+    # print(l_jac.T.shape)
+
+    p_cov_check = f_jac @ p_cov[k-1] @ f_jac.T + l_jac @ var_Q @ l_jac.T
 
     # 3. Check availability of GNSS and LIDAR measurements
+    cur_gnss_index = np.where(gnss.t == cur_time)[0]
+    cur_lidar_index = np.where(lidar.t == cur_time)[0]
+
+    if len(cur_gnss_index) > 0:
+        # print("{} - GNSS measurement available at time {}".format(cur_gnss_index, cur_time))
+        p_hat, v_hat, q_hat, p_cov_hat = measurement_update(sensor_var = R_gnss,
+                                                            p_cov_check = p_cov_check,
+                                                            y_k = gnss.data[cur_gnss_index],
+                                                            p_check = p_check,
+                                                            v_check = v_check,
+                                                            q_check = q_check)
+
+    # elif len(cur_lidar_index) > 0:
+    #     # print("{} - LIDAR measurement available at time {}".format(cur_lidar_index, cur_time))
+    #     p_hat, v_hat, q_hat, p_cov_hat = measurement_update(sensor_var = R_lidar,
+    #                                                         p_cov_check = p_cov_check,
+    #                                                         y_k = lidar.data[cur_lidar_index],
+    #                                                         p_check = p_check,
+    #                                                         v_check = v_check,
+    #                                                         q_check = q_check)
+    #
+    else:
+        p_hat = p_check
+        v_hat = v_check
+        q_hat = q_check
+        p_cov_hat = p_cov_check
 
     # Update states (save)
+    p_est[k] = p_hat.flatten()
+    v_est[k] = v_hat.flatten()
+    q_est[k] = q_hat.flatten()
+    p_cov[k] = p_cov_hat
 
 
 #### 6. Results and Analysis ###################################################################
@@ -236,8 +309,8 @@ for i in range(3):
 ax[1, 0].set_ylabel('Radians')
 plt.show()
 
-#### 7. Submission #############################################################################
 
+#### 7. Submission #############################################################################
 ################################################################################################
 # Now we can prepare your results for submission to the Coursera platform. Uncomment the
 # corresponding lines to prepare a file that will save your position estimates in a format
@@ -270,3 +343,4 @@ with open('pt1_submission.txt', 'w') as file:
 #         p3_str += '%.3f ' % (p_est[val, i])
 # with open('pt3_submission.txt', 'w') as file:
 #     file.write(p3_str)
+
