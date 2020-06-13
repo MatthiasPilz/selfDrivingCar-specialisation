@@ -219,15 +219,15 @@ for k in range(1, imu_f.data.shape[0]):  # start at 1 b/c we have initial predic
                                                             v_check = v_check,
                                                             q_check = q_check)
 
-    # elif len(cur_lidar_index) > 0:
-    #     # print("{} - LIDAR measurement available at time {}".format(cur_lidar_index, cur_time))
-    #     p_hat, v_hat, q_hat, p_cov_hat = measurement_update(sensor_var = R_lidar,
-    #                                                         p_cov_check = p_cov_check,
-    #                                                         y_k = lidar.data[cur_lidar_index],
-    #                                                         p_check = p_check,
-    #                                                         v_check = v_check,
-    #                                                         q_check = q_check)
-    #
+    elif len(cur_lidar_index) > 0:
+        # print("{} - LIDAR measurement available at time {}".format(cur_lidar_index, cur_time))
+        p_hat, v_hat, q_hat, p_cov_hat = measurement_update(sensor_var = R_lidar,
+                                                            p_cov_check = p_cov_check,
+                                                            y_k = lidar.data[cur_lidar_index],
+                                                            p_check = p_check,
+                                                            v_check = v_check,
+                                                            q_check = q_check)
+
     else:
         p_hat = p_check
         v_hat = v_check
@@ -318,13 +318,13 @@ plt.show()
 ################################################################################################
 
 # Pt. 1 submission
-p1_indices = [9000, 9400, 9800, 10200, 10600]
-p1_str = ''
-for val in p1_indices:
-    for i in range(3):
-        p1_str += '%.3f ' % (p_est[val, i])
-with open('pt1_submission.txt', 'w') as file:
-    file.write(p1_str)
+# p1_indices = [9000, 9400, 9800, 10200, 10600]
+# p1_str = ''
+# for val in p1_indices:
+#     for i in range(3):
+#         p1_str += '%.3f ' % (p_est[val, i])
+# with open('pt1_submission.txt', 'w') as file:
+#     file.write(p1_str)
 
 # Pt. 2 submission
 # p2_indices = [9000, 9400, 9800, 10200, 10600]
@@ -336,11 +336,11 @@ with open('pt1_submission.txt', 'w') as file:
 #     file.write(p2_str)
 
 # Pt. 3 submission
-# p3_indices = [6800, 7600, 8400, 9200, 10000]
-# p3_str = ''
-# for val in p3_indices:
-#     for i in range(3):
-#         p3_str += '%.3f ' % (p_est[val, i])
-# with open('pt3_submission.txt', 'w') as file:
-#     file.write(p3_str)
+p3_indices = [6800, 7600, 8400, 9200, 10000]
+p3_str = ''
+for val in p3_indices:
+    for i in range(3):
+        p3_str += '%.3f ' % (p_est[val, i])
+with open('pt3_submission.txt', 'w') as file:
+    file.write(p3_str)
 
