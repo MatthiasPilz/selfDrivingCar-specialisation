@@ -95,11 +95,11 @@ class LocalPlanner:
         # heading = ...
 
         if goal_index == len(waypoints)-1:
-            delta_x = goal_state[0] - waypoints[goal_index-1][0]
-            delta_y = goal_state[1] - waypoints[goal_index-1][1]
-        else:
             delta_x = waypoints[goal_index][0] - waypoints[goal_index-1][0]
             delta_y = waypoints[goal_index][1] - waypoints[goal_index-1][1]
+        else:
+            delta_x = waypoints[goal_index+1][0] - waypoints[goal_index][0]
+            delta_y = waypoints[goal_index+1][1] - waypoints[goal_index][1]
 
         heading = np.arctan2(delta_y, delta_x)
         # ------------------------------------------------------------------
@@ -132,8 +132,8 @@ class LocalPlanner:
         # goal_y = ...
 
         angle = -ego_state[2]
-        goal_x = goal_state_local[0] * cos(angle) - goal_state_local[1] * sin(angle)
-        goal_y = goal_state_local[0] * sin(angle) + goal_state_local[1] * cos(angle)
+        goal_x = goal_state_local[0] * np.cos(angle) - goal_state_local[1] * np.sin(angle)
+        goal_y = goal_state_local[0] * np.sin(angle) + goal_state_local[1] * np.cos(angle)
         # ------------------------------------------------------------------
 
         # Compute the goal yaw in the local frame by subtracting off the 
@@ -142,7 +142,8 @@ class LocalPlanner:
         # ------------------------------------------------------------------
         # goal_t = ...
 
-        goal_t = ego_state[2] - heading
+        # goal_t = ego_state[2] - heading
+        goal_t = heading - ego_state[2]
         # ------------------------------------------------------------------
 
         # Velocity is preserved after the transformation.
@@ -171,8 +172,8 @@ class LocalPlanner:
             # ------------------------------------------------------------------
             # x_offset = ...
             # y_offset = ...
-            x_offset = offset * cos(goal_t + pi/2)
-            y_offset = offset * sin(goal_t + pi/2)
+            x_offset = offset * np.cos(goal_t + pi/2)
+            y_offset = offset * np.sin(goal_t + pi/2)
             # ------------------------------------------------------------------
 
             goal_state_set.append([goal_x + x_offset, 

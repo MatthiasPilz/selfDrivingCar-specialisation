@@ -77,7 +77,7 @@ class PathOptimizer:
         # ------------------------------------------------------------------
         # bounds = ...
 
-        bounds = [[-0.5, 0.5], [-0.5, 0.5], [sf_0, float('Inf')]]
+        bounds = [[-0.5, 0.5], [-0.5, 0.5], [sf_0, np.inf]]
         # ------------------------------------------------------------------
 
         # Here we will call scipy.optimize.minimize to optimize our spiral.
@@ -89,11 +89,12 @@ class PathOptimizer:
         # ------------------------------------------------------------------
         # res = scipy.optimize.minimize(...)
 
-        res = scipy.optimize.minimize(fun       = self.objective,
-                                      x0        = np.array(p0),
-                                      bounds    = bounds,
-                                      method    = 'L-BFGS-B',
-                                      jac       = self.objective_grad)
+        # res = scipy.optimize.minimize(fun       = self.objective,
+        #                               x0        = np.array(p0),
+        #                               bounds    = bounds,
+        #                               method    = 'L-BFGS-B',
+        #                               jac       = self.objective_grad)
+        res = scipy.optimize.minimize(self.objective, p0, method='L-BFGS-B', jac=self.objective_grad, constraints=bounds)
         # ------------------------------------------------------------------
 
         spiral = self.sample_spiral(res.x)
@@ -126,7 +127,8 @@ class PathOptimizer:
         # thetas = ...
         # return thetas
 
-        thetas = np.multiply(a, s) + 0.5*np.multiply(b, s**2) + np.multiply(c, s**3)/3 + 0.25*np.multiply(d, s**4)
+        # thetas = np.multiply(a, s) + 0.5*np.multiply(b, s**2) + np.multiply(c, s**3)/3 + 0.25*np.multiply(d, s**4)
+        thetas = [a * x + b * x ** 2 / 2 + c * x ** 3 / 3 + d * x ** 4 / 4 for x in s]
         return thetas
         # ------------------------------------------------------------------
 
@@ -186,12 +188,15 @@ class PathOptimizer:
         # y_points = ...
         # return [x_points, y_points, t_points]
 
-        t_points = self.thetaf(a, b, c, d, s_points)
-        x_points = scipy.integrate.cumtrapz(y = np.cos(t_points),
-                                            x = s_points)
-        y_points = scipy.integrate.cumtrapz(y = np.sin(t_points),
-                                            x = s_points)
+        # t_points = self.thetaf(a, b, c, d, s_points)
+        # x_points = scipy.integrate.cumtrapz(y = np.cos(t_points),
+        #                                     x = s_points)
+        # y_points = scipy.integrate.cumtrapz(y = np.sin(t_points),
+        #                                     x = s_points)
 
+        t_points = self.thetaf(a, b, c, d, s_points)
+        x_points = scipy.integrate.cumtrapz(np.cos(t_points), s_points, initial=0.0)
+        y_points = scipy.integrate.cumtrapz(np.sin(t_points), s_points, initial=0.0)
         return [x_points, y_points, t_points]
         # ------------------------------------------------------------------
 

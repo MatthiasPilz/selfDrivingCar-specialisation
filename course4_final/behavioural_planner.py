@@ -125,10 +125,10 @@ class BehaviouralPlanner:
             # self._goal_state = ...
 
             goal_index, stop_sign_found = self.check_for_stop_signs(waypoints       = waypoints,
-                                                                    closest_index   = closest_index,
-                                                                    goal_index      = goal_index)
+                                                                   closest_index   = closest_index,
+                                                                   goal_index      = goal_index)
             self._goal_index = goal_index
-            self._goal_state = waypoints[goal_index]
+            self._goal_state = waypoints[self._goal_index]
             # ------------------------------------------------------------------
 
             # If stop sign found, set the goal to zero speed, then transition to 
@@ -189,11 +189,11 @@ class BehaviouralPlanner:
                 # self._goal_index = ... 
                 # self._goal_state = ...
 
-                goal_index, stop_sign_found = self.check_for_stop_signs(waypoints=waypoints,
-                                                                        closest_index=closest_index,
-                                                                        goal_index=goal_index)
+                _, stop_sign_found = self.check_for_stop_signs(waypoints=waypoints,
+                                                               closest_index=closest_index,
+                                                               goal_index=goal_index)
                 self._goal_index = goal_index
-                self._goal_state = waypoints[goal_index]
+                self._goal_state = waypoints[self._goal_index]
                 # --------------------------------------------------------------
 
                 # If the stop sign is no longer along our path, we can now
@@ -204,6 +204,7 @@ class BehaviouralPlanner:
                 #   ...
 
                 if not stop_sign_found:
+                    self._stop_count = 0
                     self._state = FOLLOW_LANE
                 # --------------------------------------------------------------
 
@@ -362,8 +363,11 @@ class BehaviouralPlanner:
                     intersect_flag = True
                 if (sign_3 == 0) and pointOnSegment(s_1, wp_1, s_2):
                     intersect_flag = True
+                # TODO: debug check
                 if (sign_3 == 0) and pointOnSegment(s_1, wp_2, s_2):
                     intersect_flag = True
+                # if (sign_4 == 0) and pointOnSegment(s_1, wp_2, s_2):
+                #     intersect_flag = True
 
                 # If there is an intersection with a stop line, update
                 # the goal state to stop before the goal line.
@@ -489,7 +493,7 @@ def get_closest_index(waypoints, ego_state):
 
         eucl_distance = sqrt((ego_x - cur_x)**2 + (ego_y - cur_y)**2)
 
-        if eucl_distance < closest_len:
+        if eucl_distance <= closest_len:
             closest_len = eucl_distance
             closest_index = i
     # ------------------------------------------------------------------

@@ -85,8 +85,10 @@ class CollisionChecker:
                 # circle_locations[:, 0] = ... 
                 # circle_locations[:, 1] = ...
 
-                circle_locations[:, 0] = path[0][j] + np.multiply(self._circle_offsets, np.cos(path[2][j]))
-                circle_locations[:, 1] = path[1][j] + np.multiply(self._circle_offsets, np.sin(path[2][j]))
+                # circle_locations[:, 0] = path[0][j] + np.multiply(self._circle_offsets, np.cos(path[2][j]))
+                # circle_locations[:, 1] = path[1][j] + np.multiply(self._circle_offsets, np.sin(path[2][j]))
+                circle_locations[:, 0] = [i * int(np.cos(path[2][j])) for i in self._circle_offsets] + path[0][j]
+                circle_locations[:, 1] = [i * int(np.sin(path[2][j])) for i in self._circle_offsets] + path[1][j]
                 # --------------------------------------------------------------
 
                 # Assumes each obstacle is approximated by a collection of
@@ -170,14 +172,17 @@ class CollisionChecker:
                 # score = ...
 
                 # first try: L2-norm
-                goal_x = goal_state[0]
-                goal_y = goal_state[1]
+                # goal_x = goal_state[0]
+                # goal_y = goal_state[1]
+                #
+                # # considering the last point in this path!?
+                # path_x = paths[i][0][-1]
+                # path_y = paths[i][1][-1]
+                #
+                # score = np.sqrt((goal_x - path_x)**2 + (goal_y - path_y)**2)
 
-                # considering the last point in this path!?
-                path_x = paths[i][0][-1]
-                path_y = paths[i][1][-1]
-
-                score = np.sqrt((goal_x - path_x)**2 + (goal_y - path_y)**2)
+                # second try:
+                score = np.sqrt((goal_state[0] - paths[i][0][len(paths[i][0]) - 1]) ** 2 + (goal_state[1] - paths[i][1][len(paths[i][0]) - 1]) ** 2)
                 # --------------------------------------------------------------
 
                 # Compute the "proximity to other colliding paths" score and
@@ -193,8 +198,13 @@ class CollisionChecker:
                             # score += self._weight * ...
 
                             # first try: just disregard this term!
-                            score += self._weight * 0.0
+                            # score += self._weight * 0.0
+
+                            # second try:
+                            # score += self._weight * sqrt((paths[i][1][-1] - paths[j][1][-1]) ** 2 + (paths[i][0][-1] - paths[j][0][-1]) ** 2)
+                            score += self._weight * paths[i][2][j]
                             # --------------------------------------------------
+                            pass
 
             # Handle the case of colliding paths.
             else:
