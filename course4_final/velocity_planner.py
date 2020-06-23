@@ -472,6 +472,7 @@ class VelocityPlanner:
 
         return profile
 
+
 ######################################################
 ######################################################
 # MODULE 7: COMPUTE TOTAL DISTANCE WITH CONSTANT ACCELERATION
@@ -495,11 +496,15 @@ def calc_distance(v_i, v_f, a):
     """
     pass
 
-    # TODO: INSERT YOUR CODE BETWEEN THE DASHED LINES
+    # INSERT YOUR CODE BETWEEN THE DASHED LINES
     # ------------------------------------------------------------------
     # d = ...
     # return d
+
+    d = (v_f**2 - v_i**2) / (2 * a)
+    return d
     # ------------------------------------------------------------------
+
 
 ######################################################
 ######################################################
@@ -526,9 +531,11 @@ def calc_final_speed(v_i, a, d):
     """
     pass
 
-    # TODO: INSERT YOUR CODE BETWEEN THE DASHED LINES
+    # INSERT YOUR CODE BETWEEN THE DASHED LINES
     # ------------------------------------------------------------------
     # v_f = ...
     # return v_f
+
+    sqrt(v_i**2 + 2*a*d)
     # ------------------------------------------------------------------
 
