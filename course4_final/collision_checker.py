@@ -80,7 +80,7 @@ class CollisionChecker:
                 # path[1][j]. 
                 circle_locations = np.zeros((len(self._circle_offsets), 2))
 
-                # TODO: INSERT YOUR CODE BETWEEN THE DASHED LINES
+                # INSERT YOUR CODE BETWEEN THE DASHED LINES
                 # --------------------------------------------------------------
                 # circle_locations[:, 0] = ... 
                 # circle_locations[:, 1] = ...
@@ -165,9 +165,19 @@ class CollisionChecker:
                 # The centerline goal is given by goal_state.
                 # The exact choice of objective function is up to you.
                 # A lower score implies a more suitable path.
-                # TODO: INSERT YOUR CODE BETWEEN THE DASHED LINES
+                # INSERT YOUR CODE BETWEEN THE DASHED LINES
                 # --------------------------------------------------------------
                 # score = ...
+
+                # first try: L2-norm
+                goal_x = goal_state[0]
+                goal_y = goal_state[1]
+
+                # considering the last point in this path!?
+                path_x = paths[i][0][-1]
+                path_y = paths[i][1][-1]
+
+                score = np.sqrt((goal_x - path_x)**2 + (goal_y - path_y)**2)
                 # --------------------------------------------------------------
 
                 # Compute the "proximity to other colliding paths" score and
@@ -178,12 +188,13 @@ class CollisionChecker:
                         continue
                     else:
                         if not collision_check_array[j]:
-                            # TODO: INSERT YOUR CODE BETWEEN THE DASHED LINES
+                            # INSERT YOUR CODE BETWEEN THE DASHED LINES
                             # --------------------------------------------------
                             # score += self._weight * ...
-                            # --------------------------------------------------
 
-                            pass
+                            # first try: just disregard this term!
+                            score += self._weight * 0.0
+                            # --------------------------------------------------
 
             # Handle the case of colliding paths.
             else:
