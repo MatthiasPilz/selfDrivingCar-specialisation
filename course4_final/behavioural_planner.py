@@ -99,6 +99,8 @@ class BehaviouralPlanner:
             # ------------------------------------------------------------------
             # closest_len, closest_index = ...
             # ------------------------------------------------------------------
+            closest_len, closest_index = get_closest_index(waypoints = waypoints,
+                                                           ego_state = ego_state)
 
             # Next, find the goal index that lies within the lookahead distance
             # along the waypoints.
@@ -106,6 +108,10 @@ class BehaviouralPlanner:
             # ------------------------------------------------------------------
             # goal_index = ...
             # ------------------------------------------------------------------
+            goal_index = self.get_goal_index(waypoints      = waypoints,
+                                             ego_state      = ego_state,
+                                             closest_len    = closest_len,
+                                             closest_index  = closest_index)
 
             # Finally, check the index set between closest_index and goal_index
             # for stop signs, and compute the goal state accordingly.
@@ -115,6 +121,11 @@ class BehaviouralPlanner:
             # self._goal_index = ...
             # self._goal_state = ...
             # ------------------------------------------------------------------
+            goal_index, stop_sign_found = self.check_for_stop_signs(waypoints       = waypoints,
+                                                                    closest_index   = closest_index,
+                                                                    goal_index      = goal_index)
+            self._goal_index = goal_index
+            self._goal_state = waypoints[goal_index]
 
             # If stop sign found, set the goal to zero speed, then transition to 
             # the deceleration state.
@@ -123,8 +134,9 @@ class BehaviouralPlanner:
             # if stop_sign_found:
             #   ...
             # ------------------------------------------------------------------
-
-            pass
+            if stop_sign_found:
+                self._goal_state[2] = 0.0
+                self._state = DECELERATE_TO_STOP
 
         # In this state, check if we have reached a complete stop. Use the
         # closed loop speed to do so, to ensure we are actually at a complete
@@ -135,8 +147,8 @@ class BehaviouralPlanner:
             # ------------------------------------------------------------------
             # ...
             # ------------------------------------------------------------------
-
-            pass
+            if closed_loop_speed < STOP_THRESHOLD:
+                self._state = STAY_STOPPED
 
         # In this state, check to see if we have stayed stopped for at
         # least STOP_COUNTS number of cycles. If so, we can now leave
@@ -153,6 +165,13 @@ class BehaviouralPlanner:
                 # closest_len, closest_index = ...
                 # goal_index = ...
                 # --------------------------------------------------------------
+                closest_len, closest_index = get_closest_index(waypoints=waypoints,
+                                                               ego_state=ego_state)
+
+                goal_index = self.get_goal_index(waypoints=waypoints,
+                                                 ego_state=ego_state,
+                                                 closest_len=closest_len,
+                                                 closest_index=closest_index)
 
                 # We've stopped for the required amount of time, so the new goal 
                 # index for the stop line is not relevant. Use the goal index
@@ -163,6 +182,11 @@ class BehaviouralPlanner:
                 # self._goal_index = ... 
                 # self._goal_state = ... 
                 # --------------------------------------------------------------
+                goal_index, stop_sign_found = self.check_for_stop_signs(waypoints=waypoints,
+                                                                        closest_index=closest_index,
+                                                                        goal_index=goal_index)
+                self._goal_index = goal_index
+                self._goal_state = waypoints[goal_index]
 
                 # If the stop sign is no longer along our path, we can now
                 # transition back to our lane following state.
@@ -171,8 +195,8 @@ class BehaviouralPlanner:
                 # if not stop_sign_found:
                 #   ...
                 # --------------------------------------------------------------
-
-                pass
+                if not stop_sign_found:
+                    self._state = FOLLOW_LANE
 
             # Otherwise, continue counting.
             else:
@@ -180,8 +204,8 @@ class BehaviouralPlanner:
                 # --------------------------------------------------------------
                 # ...
                 # --------------------------------------------------------------
+                self._stop_count += 1
 
-                pass
         else:
             raise ValueError('Invalid state value.')
 
@@ -251,6 +275,13 @@ class BehaviouralPlanner:
         # while wp_index < len(waypoints) - 1:
         #   arc_length += ...
         # ------------------------------------------------------------------
+        while wp_index < len(waypoints) - 1:
+            wp_index += 1
+            arc_length += np.sqrt((waypoints[wp_index][0] - waypoints[wp_index-1][0])**2 +
+                                  (waypoints[wp_index][1] - waypoints[wp_index-1][1])**2)
+
+            if arc_length > self._lookahead:
+                break
 
         return wp_index
 
@@ -438,6 +469,18 @@ def get_closest_index(waypoints, ego_state):
     # for i in range(len(waypoints)):
     #   ...
     # ------------------------------------------------------------------
+    ego_x = ego_state[0]
+    ego_y = ego_state[1]
+
+    for i in range(len(waypoints)):
+        cur_x = waypoints[i][0]
+        cur_y = waypoints[i][1]
+
+        eucl_distance = np.sqrt((ego_x - cur_x)**2 + (ego_y - cur_y)**2)
+
+        if eucl_distance < closest_len:
+            closest_len = eucl_distance
+            closest_index = i
 
     return closest_len, closest_index
 
