@@ -85,8 +85,8 @@ class CollisionChecker:
                 # circle_locations[:, 0] = ... 
                 # circle_locations[:, 1] = ...
 
-                circle_locations[:, 0] = path[0][j] + self._circle_offsets * cos(path[2][j])
-                circle_locations[:, 1] = path[1][j] + self._circle_offsets * sin(path[2][j])
+                circle_locations[:, 0] = path[0][j] + np.multiply(self._circle_offsets, np.cos(path[2][j]))
+                circle_locations[:, 1] = path[1][j] + np.multiply(self._circle_offsets, np.sin(path[2][j]))
                 # --------------------------------------------------------------
 
                 # Assumes each obstacle is approximated by a collection of
