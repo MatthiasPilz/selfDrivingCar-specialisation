@@ -9,6 +9,7 @@
 
 import numpy as np
 import math
+from math import sin, cos, pi, sqrt
 
 # State machine states
 FOLLOW_LANE = 0
@@ -286,8 +287,8 @@ class BehaviouralPlanner:
 
         while wp_index < len(waypoints) - 1:
             wp_index += 1
-            arc_length += np.sqrt((waypoints[wp_index][0] - waypoints[wp_index-1][0])**2 +
-                                  (waypoints[wp_index][1] - waypoints[wp_index-1][1])**2)
+            arc_length += sqrt((waypoints[wp_index][0] - waypoints[wp_index-1][0])**2 +
+                               (waypoints[wp_index][1] - waypoints[wp_index-1][1])**2)
 
             if arc_length > self._lookahead:
                 break
@@ -486,7 +487,7 @@ def get_closest_index(waypoints, ego_state):
         cur_x = waypoints[i][0]
         cur_y = waypoints[i][1]
 
-        eucl_distance = np.sqrt((ego_x - cur_x)**2 + (ego_y - cur_y)**2)
+        eucl_distance = sqrt((ego_x - cur_x)**2 + (ego_y - cur_y)**2)
 
         if eucl_distance < closest_len:
             closest_len = eucl_distance
